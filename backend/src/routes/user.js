@@ -11,7 +11,13 @@ authRouter.post("/signup", async (req, res) => {
   // creating new instance of user model
   const { firstName, lastName, email, password } = req.body;
   const passwordHash = await bcrypt.hash(password, 10);
-  const user = new User({ firstName, lastName, email, password: passwordHash });
+  const user = new User({
+    firstName,
+    lastName,
+    email,
+    profilepic,
+    password: passwordHash,
+  });
   //   the data coming from req.body is in json so for it we need middleware to convert data in json
   try {
     const data = await user.save();
@@ -36,8 +42,10 @@ authRouter.post("/login", async (req, res) => {
 
     const isPasswordCorrect = bcrypt.compare(password, user.password);
     if (isPasswordCorrect) {
-      const token = jwt.sign({ _id: user._id }, "Dev@123");
-      res.cookie("token", token);
+      const token = jwt.sign({ _id: user._id }, "Dev@123", {
+        expiresIn: "1d",
+      });
+      res.cookie("token", token, { expires: new Date(Date.now() + 900000) });
       res.send("login succesfull");
     } else {
       throw new Error("password incorrect");
@@ -47,9 +55,47 @@ authRouter.post("/login", async (req, res) => {
   }
 });
 
-authRouter.get("/profile", userAuth, async (req, res) => {
+authRouter.post("/logout", async (req, res) => {
+  res.cookie("token", null);
+  res.send("logout succesfull");
+});
+
+authRouter.put("/updateprofile", userAuth, async (req, res) => {
+  try {
+    // getting profilepic from signup api from USER model
+    const { profilePic } = req.body;
+    // from userAuth middleware getting _id
+    const userId = req.user._id;
+    if (!profilePic) {
+      return res.status(200).json({ message: "profile pic required" });
+    }
+    const uploadResponse = await cloudnary.uploader.upload(profilePic);
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      {
+        profilePic: uploadResponse.secure_url,
+      },
+      { new: true }
+    );
+    res.status(200).send(updatedUser);
+  } catch (error) {
+    console.log("error in update profile", error.message);
+    res.status(400).json({ message: "internal server error" });
+  }
+});
+
+authRouter.get("/profileview", userAuth, async (req, res) => {
   const user = req.user;
   res.send(user);
+});
+
+authRouter.get("/check", userAuth, async (req, res) => {
+  try {
+    res.status(200).json(req.user);
+  } catch (error) {
+    console.log("error in check auth controller");
+    res.status(500).json({ message: "Internal server error" });
+  }
 });
 
 module.exports = authRouter;
