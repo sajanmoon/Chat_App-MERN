@@ -46,7 +46,7 @@ authRouter.post("/login", async (req, res) => {
         expiresIn: "1d",
       });
       res.cookie("token", token, { expires: new Date(Date.now() + 900000) });
-      res.send("login succesfull");
+      res.send(user);
     } else {
       throw new Error("password incorrect");
     }
@@ -84,9 +84,17 @@ authRouter.put("/updateprofile", userAuth, async (req, res) => {
   }
 });
 
-authRouter.get("/profileview", userAuth, async (req, res) => {
-  const user = req.user;
-  res.send(user);
+authRouter.get("/profile/view", userAuth, async (req, res) => {
+  // Here we are reciving the token from login API
+  // To read the cookie token we need external package cookie parser
+  // Import it and give middleware app.use(cookieParser())
+  try {
+    // this user we are getting from auth middleware req
+    const user = req.user;
+    res.send(user);
+  } catch (error) {
+    res.status(400).send("profile loading failed" + error);
+  }
 });
 
 authRouter.get("/check", userAuth, async (req, res) => {
@@ -94,7 +102,7 @@ authRouter.get("/check", userAuth, async (req, res) => {
     res.status(200).json(req.user);
   } catch (error) {
     console.log("error in check auth controller");
-    res.status(500).json({ message: "Internal server error" });
+    res.status(401).json({ message: "Internal server error" });
   }
 });
 

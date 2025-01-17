@@ -3,10 +3,18 @@ const connectDB = require("./config/database");
 const authRouter = require("./routes/user");
 const messageRouter = require("./routes/message");
 const cookieParser = require("cookie-parser");
+const cors = require("cors");
 
 const app = express();
 app.use(express.json());
 app.use(cookieParser());
+
+app.use(
+  cors({
+    origin: "http://localhost:5173", // Frontend URL
+    credentials: true, // Correct property for credentials
+  })
+);
 
 app.use("/", authRouter);
 app.use("/", messageRouter);

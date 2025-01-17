@@ -7,21 +7,27 @@ const userAuth = async (req, res, next) => {
 
     const { token } = cookies;
     if (!token) {
-      throw new Error("Invalid token");
+      return res.status(401).send("Please login");
     }
 
-    const decodedMessage = jwt.verify(token, "Dev@123");
+    try {
+      const decodedMessage = jwt.verify(token, "Dev@123");
 
-    const { _id } = decodedMessage;
+      const { _id } = decodedMessage;
 
-    const user = await User.findById(_id);
-    if (!user) {
-      throw new Error("invalid user");
+      const user = await User.findById(_id);
+      if (!user) {
+        throw new Error("invalid user");
+      }
+
+      req.user = user;
+
+      next();
+    } catch (error) {
+      return res
+        .status(401)
+        .json({ error: "Invalid or expired token. Please login again." });
     }
-
-    req.user = user;
-
-    next();
   } catch (error) {
     res.status(400).send("error fetching token" + error);
   }
